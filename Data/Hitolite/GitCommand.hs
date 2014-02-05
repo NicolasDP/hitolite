@@ -4,24 +4,20 @@ module Data.Hitolite.GitCommand
     , commandLineParser
     ) where
 
-import Data.ByteString.Char8 (ByteString, split, empty)
+import Data.ByteString.Char8 as BS
+import Data.List             as L
 
 data GitCommand = GitCommand
-    { gitType    :: GitCommandType
-    , gitCmd     :: ByteString
-    , gitCmdArgs :: [ByteString]
+    { gitCmd     :: BS.ByteString
+    , gitCmdArgs :: [BS.ByteString]
     } deriving (Eq, Show)
 
-data GitCommandType = GitUploadPack
-                    | GitUploadArchive
-                    | GitUnknown
-    deriving (Eq, Show)
-
-commandLineParser :: ByteString -> GitCommand
+commandLineParser :: BS.ByteString -> GitCommand
 commandLineParser cl =
-    let list = filter ((/=) empty) $ split ' ' cl
-    in  GitCommand (getCommandType $ head list) (head list) (tail list)
+    let list = L.filter ((/=) BS.empty) $ BS.split ' ' cl
+    in  GitCommand (L.head list) (L.map removeUselessQuotes $ L.tail list)
     where
-        getCommandType :: ByteString -> GitCommandType
-        getCommandType "git-upload-pack" = GitUploadPack
-        getCommandType _                 = GitUnknown
+        removeUselessQuotes :: ByteString -> ByteString
+        removeUselessQuotes s =
+            let s1 = if ((BS.head s) == '\'') then BS.drop 1 s else s
+            in if ((BS.last s1) == '\'') then BS.take ((BS.length s1) - 1) s1 else s1
