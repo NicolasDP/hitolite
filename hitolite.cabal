@@ -34,6 +34,7 @@ executable           hitolite
                    , process
                    , unix
                    , bytestring
+                   , hslogger
                    , hitolite
     Buildable: True
   else
