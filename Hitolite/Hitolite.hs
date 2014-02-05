@@ -6,21 +6,21 @@ import System.Posix.Env.ByteString
 import System.Posix.Process.ByteString
 
 import System.Log.Logger
-import System.Log.Handler.Simple
+import System.Log.Handler.Syslog
 
 findIn :: ByteString -> [(ByteString, ByteString)] -> Maybe ByteString
 findIn _   []         = Nothing
 findIn key ((k,c):xs) = if (key == k) then Just c else findIn key xs
 
 main = do
-    s <- fileHandler "/tmp/hitolite.log" DEBUG
+    s <- openlog "Hitolite" [PID] USER DEBUG
     updateGlobalLogger rootLoggerName (addHandler s)
     userName <- getArgs
     envs <- getEnvironment
     case findIn "SSH_ORIGINAL_COMMAND" envs of
         Nothing   -> Prelude.putStrLn "error, command not found"
         Just ocmd -> do let theCmd = commandLineParser ocmd
-                        debugM
+                        warningM
                            ("user(" ++ (unpack $ Prelude.head userName) ++ ")")
                            (unpack ocmd)
                         executeFile (gitCmd theCmd) True (gitCmdArgs theCmd) (Just envs)
