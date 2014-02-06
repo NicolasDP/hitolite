@@ -1,32 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Data.Hitolite.GitCommand
 import Data.Hitolite.Database
 import Database.Persist
 
 import Data.ByteString.Char8 as BS
 
 import System.Posix.Env.ByteString
-import System.Posix.Process.ByteString
 
 import System.Log.Logger
 import System.Log.Handler.Syslog
 
-showKeysFrom name = do
-    listRes <- selectHitUser name
+showKeysFrom dbname = do
+    listRes <- selectAuthorizedKeys dbname
     Prelude.mapM_ showKeyOf listRes
     where
         showKeyOf ent =
             let val = entityVal ent
+                cmd = if (BS.null $ userCommand val) then BS.empty
+                                                     else BS.concat [" command=\"",userCommand val,"\""]
             in  do warningM
-                       ("user(" ++ (BS.unpack name) ++ ")")
-                       ("key(" ++ (BS.unpack $ usersPubKey val) ++ ")")
-                   BS.putStrLn $ usersPubKey val
+                       ("database(" ++ (BS.unpack dbname) ++ ")")
+                       ("#name(" ++ (BS.unpack $ userName val) ++ ")")
+                   BS.putStrLn $ BS.concat [userPubKey val,cmd]
 
 main = do
-    s <- openlog "CheckAuthorizedKey" [PID] USER DEBUG
+    s <- openlog "CheckAuthorizedKey" [PID] USER WARNING
     updateGlobalLogger rootLoggerName (addHandler s)
     args <- getArgs
     case args of
-        [name] -> do warningM "check pubkey" (unpack name)
-                     showKeysFrom name
-        _      -> errorM "Bad command line" (show args)
+        [dbname] -> do warningM "check pubkey" ("#" ++ (unpack dbname))
+                       showKeysFrom dbname
+        _        -> errorM "Bad command line" (show args)

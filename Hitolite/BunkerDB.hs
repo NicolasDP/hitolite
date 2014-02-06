@@ -1,31 +1,33 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Data.Hitolite.GitCommand
 import Data.Hitolite.Database
 import Database.Persist
 
 import Data.ByteString.Char8 as BS
 
 import System.Posix.Env.ByteString
-import System.Posix.Process.ByteString
 
-import System.Log.Logger
-import System.Log.Handler.Syslog
-
-showKeysFrom name = do
-    listRes <- selectHitUser name
+showKeysFrom dbname = do
+    listRes <- selectAuthorizedKeys dbname
     Prelude.mapM_ showKeyOf listRes
     where
         showKeyOf ent =
             let val = entityVal ent
-            in  Prelude.putStrLn $ "user(" ++ (BS.unpack $ usersLogin val) ++ ") "
-                                 ++ "key(" ++ (BS.unpack $ usersPubKey val) ++ ")"
+                keyId  = unKey $ entityKey ent
+            in  Prelude.putStrLn $ "id(" ++ (show keyId) ++ ") "
+                                ++ "user(" ++ (BS.unpack $ userName val) ++ ") "
+                                 ++ "key(" ++ (BS.unpack $ userPubKey val) ++ ") "
+                                 ++ "cmd(" ++ (BS.unpack $ userCommand val) ++ ")"
 
 main = do
     args <- getArgs
     case args of
-        ["add",name,key] -> do _ <- insertHitUser name key
-                               return ()
-        ["get",name] -> showKeysFrom name
-        ["del",name] -> do _ <- deleteHitUser name
-                           return ()
+        ["create",dbname]           -> do _ <- createHitTable dbname
+                                          return ()
+        ["add",dbname,key,name,cmd] -> do _ <- insertHitUser dbname key name cmd
+                                          return ()
+        ["add",dbname,key,name]     -> do _ <- insertHitUser dbname key name BS.empty
+                                          return ()
+        ["get",name]                -> showKeysFrom name
+        ["del",dbname,name]         -> do _ <- deleteHitUser dbname name
+                                          return ()
         _            -> Prelude.putStrLn "bad command line"
