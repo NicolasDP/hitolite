@@ -27,7 +27,7 @@ library
                    , monad-logger
                    , conduit
                    , text
-  exposed-modules:   Data.GitBunker.GitCommand
+  exposed-modules:   Data.GitBunker.Hitolite
                    , Data.GitBunker.Database
   build-depends:       base >=4.6 && <4.7
   default-language:  Haskell2010

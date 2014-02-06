@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Data.GitBunker.GitCommand
+module Data.GitBunker.Hitolite
     ( GitCommand(..)
     , commandLineParser
     ) where

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Data.GitBunker.GitCommand
+import Data.GitBunker.Hitolite
 
 import Data.ByteString.Char8
 
