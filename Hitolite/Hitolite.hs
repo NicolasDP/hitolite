@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Data.Hitolite.GitCommand
+import Data.Hitolite.Database
 
 import Data.ByteString.Char8
+
 import System.Posix.Env.ByteString
 import System.Posix.Process.ByteString
 
@@ -16,11 +18,16 @@ main = do
     s <- openlog "Hitolite" [PID] USER DEBUG
     updateGlobalLogger rootLoggerName (addHandler s)
     userName <- getArgs
+    _ <- createHitTable
+    user <- selectHitUser $ Prelude.head userName
     envs <- getEnvironment
     case findIn "SSH_ORIGINAL_COMMAND" envs of
         Nothing   -> Prelude.putStrLn "error, command not found"
         Just ocmd -> do let theCmd = commandLineParser ocmd
                         warningM
                            ("user(" ++ (unpack $ Prelude.head userName) ++ ")")
-                           (unpack ocmd)
+                           (show theCmd)
+                        Prelude.mapM_ (\u -> warningM
+                           ("user(" ++ (unpack $ Prelude.head userName) ++ ")")
+                           (show u)) user
                         executeFile (gitCmd theCmd) True (gitCmdArgs theCmd) (Just envs)
