@@ -2,8 +2,9 @@
 {-# LANGUAGE OverloadedStrings, GADTs, FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 module Data.Hitolite.Database
-    ( Users(..)
+    ( UsersGeneric(..)
     , insertHitUser
+    , deleteHitUser
     , selectHitUser
     , createHitTable
     ) where
@@ -30,5 +31,8 @@ insertHitUser userName userKey =
 
 selectHitUser userName =
     runDB $ selectList [UsersLogin ==. userName] []
+
+deleteHitUser userName =
+    runDB $ deleteWhere $ [UsersLogin ==. userName]
 
 createHitTable = runDB $ runMigrationSilent migrateTables
