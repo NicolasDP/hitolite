@@ -14,7 +14,7 @@
 -- The idea is to create a database per login. So you can manage different
 -- authorized keys for different user.
 --
-module Data.Hitolite.Database
+module Data.GitBunker.Database
     ( -- * User's key
       UserGeneric(..)
 

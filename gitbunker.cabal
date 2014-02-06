@@ -1,5 +1,5 @@
-name:                hitolite
-version:             0.0.0
+name:                gitbunker
+version:             0.0.1
 synopsis:            A gitolite-like, but in haskell
 -- description:
 license:             BSD3
@@ -27,15 +27,15 @@ library
                    , monad-logger
                    , conduit
                    , text
-  exposed-modules:   Data.Hitolite.GitCommand
-                   , Data.Hitolite.Database
+  exposed-modules:   Data.GitBunker.GitCommand
+                   , Data.GitBunker.Database
   build-depends:       base >=4.6 && <4.7
   default-language:  Haskell2010
   ghc-options:       -Wall -fno-warn-missing-signatures
 
 executable           hitolite
   main-is:           Hitolite.hs
-  hs-source-dirs:    Hitolite
+  hs-source-dirs:    GitBunker
   default-language:  Haskell2010
   ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures
   if flag(executable)
@@ -44,14 +44,14 @@ executable           hitolite
                    , unix
                    , bytestring
                    , hslogger
-                   , hitolite
+                   , gitbunker
     Buildable: True
   else
     Buildable: False
 
 executable           bunkerdb
   main-is:           BunkerDB.hs
-  hs-source-dirs:    Hitolite
+  hs-source-dirs:    GitBunker
   default-language:  Haskell2010
   ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures
   if flag(executable)
@@ -61,14 +61,14 @@ executable           bunkerdb
                    , unix
                    , bytestring
                    , hslogger
-                   , hitolite
+                   , gitbunker
     Buildable: True
   else
     Buildable: False
 
 executable           check_authorizedkeys
   main-is:           CheckAuthorizedkeys.hs
-  hs-source-dirs:    Hitolite
+  hs-source-dirs:    GitBunker
   default-language:  Haskell2010
   ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures
   if flag(executable)
@@ -78,7 +78,7 @@ executable           check_authorizedkeys
                    , unix
                    , bytestring
                    , hslogger
-                   , hitolite
+                   , gitbunker
     Buildable: True
   else
     Buildable: False

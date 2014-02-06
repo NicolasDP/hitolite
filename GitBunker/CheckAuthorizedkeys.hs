@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-import Data.Hitolite.Database
+import Data.GitBunker.Database
 import Database.Persist
 
 import Data.ByteString.Char8 as BS
