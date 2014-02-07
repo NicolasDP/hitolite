@@ -21,6 +21,7 @@ library
                    , bytestring
                    , transformers
                    , persistent
+                   , esqueleto
                    , persistent-template
                    , persistent-sqlite
                    , monad-control

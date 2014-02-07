@@ -19,17 +19,22 @@ module Data.GitBunker.Hitolite
     , deleteHitoliteUser
     , -- ** Group
       createHitoliteGroupe
+    , listHitoliteGroupe
+    , deleteHitoliteGroupe
+    , -- ** Link between Users and Groupes
+      attachUserToGroupe
+    , deleteUserFromGroupe
+    , listUserInGroupe
+    {-
     , -- ** Project
-      createHitoliteProject
-    , -- ** Linker
-      attachUserToGroup
+      createHitoliteProject -}
     ) where
 
-import Data.ByteString.Char8 as BS
-import Data.List             as L
-import Database.Persist
-import Database.Persist.Sqlite
-import Database.Persist.TH
+import qualified Data.ByteString.Char8   as BS
+import qualified Data.List               as L
+import qualified Database.Esqueleto      as E
+import qualified Database.Persist.Sqlite as DP
+import qualified Database.Persist.TH     as DP
 
 data GitCommand = GitCommand
     { gitCmd     :: BS.ByteString
@@ -41,42 +46,42 @@ commandLineParser cl =
     let list = L.filter ((/=) BS.empty) $ BS.split ' ' cl
     in  GitCommand (L.head list) (L.map removeUselessQuotes $ L.tail list)
     where
-        removeUselessQuotes :: ByteString -> ByteString
+        removeUselessQuotes :: BS.ByteString -> BS.ByteString
         removeUselessQuotes s =
             let s1 = if ((BS.head s) == '\'') then BS.drop 1 s else s
             in if ((BS.last s1) == '\'') then BS.take ((BS.length s1) - 1) s1 else s1
 
 
-share [mkPersist sqlSettings, mkMigrate "migrateTables"]
-      [persistLowerCase|
+DP.share [DP.mkPersist DP.sqlSettings, DP.mkMigrate "migrateTables"]
+      [DP.persistLowerCase|
 User
     name       BS.ByteString
     UniqueUser name
     deriving Show
 Groupe
     name         BS.ByteString
-    owner        BS.ByteString
+    owner        UserId
     UniqueGroupe name
     deriving Show
 Project
     name          BS.ByteString
-    owner         BS.ByteString
+    owner         UserId
     deriving Show
 
 UsrGrp
-    userId   BS.ByteString
-    grpId    BS.ByteString
+    userId   UserId
+    grpId    GroupeId
     read     Bool
     write    Bool
     deriving Show
 UsrPrj
-    userId   BS.ByteString
+    userId   UserId
     prjId    ProjectId
     read     Bool
     write    Bool
     deriving Show
 GrpPrj
-    grpId    BS.ByteString
+    grpId    GroupeId
     prjId    ProjectId
     read     Bool
     write    Bool
@@ -84,32 +89,77 @@ GrpPrj
 |]
 
 
-runDB f = runSqlite "/var/lib/hitoliteDB/hitolite.sqlite" f
+runDB f = DP.runSqlite "/var/lib/hitoliteDB/hitolite.sqlite" f
 
-createHitoliteTable = runDB $ runMigration migrateTables
+createHitoliteTable = runDB $ DP.runMigration migrateTables
 
 -- | Create a new UNIQUE user (return Nothing is not created)
 createHitoliteUser name =
-    runDB $ insertUnique $ User name
+    runDB $ DP.insertUnique $ User name
 
 -- | List all user in the database
 listHitoliteUser =
-    runDB $ selectList [] []
-
+    runDB $ E.select $
+            E.from $ \person -> return person
 -- | delete auser
 -- XXX: should we
 --  * delete all his projects and groupes?
 deleteHitoliteUser name =
-    runDB $ deleteWhere [UserName ==. name]
+    runDB $ do
+        userDB <- DP.selectFirst [UserName DP.==. name] []
+        case userDB of
+            Nothing -> return ()
+            Just (DP.Entity uKey _) -> do
+               DP.deleteWhere [UserId DP.==. uKey]
+               DP.deleteWhere [UsrGrpUserId DP.==. uKey]
 
 -- | Create a new UNIQUE Groupe
-createHitoliteGroupe grpName ownerName =
+createHitoliteGroupe grpName ownerName = do
     runDB $ do
-        ownerDB <- selectFirst [UserName ==. ownerName] []
+        ownerDB <- DP.selectFirst [UserName DP.==. ownerName] []
         case ownerDB of
-            Just odb -> insertUnique $ Groupe grpName (userName $ entityVal odb)
+            Just (DP.Entity k _) -> DP.insertUnique $ Groupe grpName k
             Nothing  -> return Nothing -- Throw an error maybe???
 
+listHitoliteGroupe =
+    runDB $ E.select $
+            E.from $ \groupe -> return groupe
+
+deleteHitoliteGroupe name =
+    runDB $ do
+        grpeDB <- DP.selectFirst [GroupeName DP.==. name] []
+        case grpeDB of
+            Nothing -> return ()
+            Just (DP.Entity ugKey _) -> do
+               DP.deleteWhere [GroupeId DP.==. ugKey]
+               DP.deleteWhere [UsrGrpGrpId DP.==. ugKey]
+
+-- | Attach a user to a group
+attachUserToGroupe theUserName theGroupeName prvRead prvWrite =
+    runDB $ do
+        userDB <- DP.selectFirst [UserName DP.==. theUserName] []
+        grpeDB <- DP.selectFirst [GroupeName DP.==. theGroupeName] []
+        case (userDB,grpeDB) of
+            (Just (DP.Entity uk _) ,Just (DP.Entity ug _) ) -> DP.insertUnique $ UsrGrp uk ug prvRead prvWrite
+	    _ -> return Nothing -- Throw an error maybe???
+
+listUserInGroupe theGroupeName =
+    runDB $ E.select $
+            E.from   $ \(u, ug, g) -> do
+            E.where_ (u E.^. UserId     E.==. ug E.^. UsrGrpUserId E.&&.
+                      g E.^. GroupeId   E.==. ug E.^. UsrGrpGrpId E.&&.
+                      g E.^. GroupeName E.==. E.val theGroupeName)
+            return u
+
+deleteUserFromGroupe theUserName theGroupeName =
+    runDB $ do
+        userDB <- DP.selectFirst [UserName DP.==. theUserName] []
+        grpeDB <- DP.selectFirst [GroupeName DP.==. theGroupeName] []
+        case (userDB,grpeDB) of
+            (Just (DP.Entity uk _) ,Just (DP.Entity ugk _) ) -> DP.deleteWhere [UsrGrpGrpId DP.==. ugk, UsrGrpUserId DP.==. uk]
+            _ -> return () -- Throw an error maybe???
+
+{-
 -- | Create a new project
 createHitoliteProject prjName ownerName =
     runDB $ do
@@ -118,12 +168,4 @@ createHitoliteProject prjName ownerName =
             Just odb -> insertUnique $ Project prjName (userName $ entityVal odb)
             Nothing  -> return Nothing -- Throw an error maybe???
 
--- | Attach a user to a group
-attachUserToGroup theUserName theGroupeName prvRead prvWrite =
-    runDB $ do
-        userDB <- selectFirst [UserName ==. theUserName] []
-        grpeDB <- selectFirst [GroupeName ==. theGroupeName] []
-        case (userDB,grpeDB) of
-            (Nothing,_      ) -> return Nothing -- Throw an error maybe???
-            (_      ,Nothing) -> return Nothing -- Throw an error maybe???
-            (Just _ ,Just _ ) -> insertUnique $ UsrGrp theUserName theGroupeName prvRead prvWrite
+-}
